@@ -1,4 +1,3 @@
-
 import re
 from collections import OrderedDict
 
@@ -17,7 +16,7 @@ def new_bone(parent, name):
     return bone
 
 def push_bone_context(name, bone_context):
-    
+
     bone_context.append(name)
     return bone_context
 
@@ -37,7 +36,7 @@ scanner = re.Scanner([
     (r"}", close_brace),
     (r"{", open_brace),
     (r":", None),
-    
+
     (r"\s+", None),
     ])
 
@@ -130,7 +129,7 @@ def parse_hierarchy(bvh):
     motion_channels=[]
     non_end_bones=[]
     bone_context=push_bone_context(root_name,bone_context)
-    
+
     # print "Root ", root_bone
     while(bvh[current_token][1] == "JOINT"):
         ( current_token, skeleton, bone_context, non_end_bones, motion_channels) = parse_joint(bvh,  current_token, skeleton, bone_context, non_end_bones, motion_channels)
@@ -139,10 +138,10 @@ def parse_hierarchy(bvh):
 
 
 def read_bvh_hierarchy(bvh_filename):
-	bvh_file = open(bvh_filename, "r")
-	bvh = bvh_file.read()
-	bvh_file.close()
-	tokens, remainder = scanner.scan(bvh)
-	skeleton = OrderedDict()
-	skeleton, non_end_bones=parse_hierarchy(tokens)
-	return skeleton, non_end_bones
+    bvh_file = open(bvh_filename, "r")
+    bvh = bvh_file.read()
+    bvh_file.close()
+    tokens, remainder = scanner.scan(bvh)
+    skeleton = OrderedDict()
+    skeleton, non_end_bones=parse_hierarchy(tokens)
+    return skeleton, non_end_bones
