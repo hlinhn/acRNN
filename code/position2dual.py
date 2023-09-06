@@ -7,6 +7,9 @@ from transforms3d.quaternions import qmult, mat2quat, qconjugate
 from visualize import plot_motion
 from rotation2xyz import get_skeleton_position
 from transforms3d.euler import euler2mat, euler2quat
+from tqdm import tqdm
+import os
+from pathlib import Path
 
 
 class BVHSkeleton:
@@ -26,9 +29,11 @@ class BVHSkeleton:
         self.offsets = {}
         for bone in self.skeleton.keys():
             self.offsets[bone] = self.skeleton[bone]['offsets']
-        self.chain_link = ['hip', 'abdomen', 'chest', 'neck', 'head', 'rButtock', 'rThigh', 'rShin', 'rFoot',
-                           'lButtock', 'lThigh', 'lShin', 'lFoot', 'rCollar', 'rShldr', 'rForeArm', 'rHand',
-                           'lCollar', 'lShldr', 'lForeArm', 'lHand']
+        self.chain_link = []
+        for chain in self.chain_name:
+            for link in chain:
+                if link not in self.chain_link:
+                    self.chain_link.append(link)
         self.chain_index = [self.lookup_indices[x] for x in self.chain_link]
         self.parent_index = [-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 2, 13, 14, 15, 2, 17, 18, 19]
         self.offsets_arr = np.zeros((len(self.chain_index), 3))
@@ -70,29 +75,23 @@ class BVHSkeleton:
         return [*qr, *qd]
 
     def from_rotation_to_dual(self, data):
-        transformed = []
         global_trans = []
         duals = []
         for frame in data:
             frame_trans = np.zeros((len(self.chain_index), 4, 4))
             dual_frame = np.zeros((len(self.chain_index), 8))
             for j, ind in enumerate(self.chain_index):
-                # local = self.homogeneous(frame[ind:ind+3], self.offsets_arr[j], hip=(j==0))
                 local = self.dual(frame[ind:ind+3], self.offsets_arr[j], hip=(j==0))
                 if self.parent_index[j] < 0:
-                    # frame_trans[j] = local
                     dual_frame[j] = local
                 else:
-                    # frame_trans[j] = np.dot(frame_trans[self.parent_index[j]], local)
                     dual_frame[j] = self.dual_mult(dual_frame[self.parent_index[j]], local)
-                # dual_frame[j] = self.homogeneous_to_dual(frame_trans[j])
             global_trans.append(np.array(frame[0:3]))
             duals.append(dual_frame)
         duals_np = np.stack(duals, axis=0)
-        return duals_np, global_trans
+        global_trans_np = np.stack(global_trans, axis=0)
+        return duals_np, global_trans_np
 
-    # two steps: from dual quaternion to rotation
-    # current frame to position
     def from_dual_to_position(self, current, global_trans):
         absolute_pos = []
         for i, frame in enumerate(current):
@@ -127,40 +126,30 @@ class BVHSkeleton:
         return np_positions, chain_index
 
 
-# numbers to numbers, not differentiable yet
-# order zyx
-def posrot2dual(p, r):
-    qrx = [math.cos(r[0]/2.0), math.sin(r[0]/2.0), 0, 0]
-    qry = [math.cos(r[1]/2.0), 0, math.sin(r[1]/2.0), 0]
-    qrz = [math.cos(r[2]/2.0), 0, 0, math.sin(r[2]/2.0)]
-    qr = qmult(qrz, qry)
-    qr = qmult(qr, qrx)
-    qt = [0, p[0], p[1], p[2]]
-    qd = qmult(qt, qr) / 2.0
-    return qr, qd
-
-
-def dual2posrot(d):
-    pass
+def convert_data(folder):
+    if not os.path.isfile(os.path.join(folder, "standard.bvh")):
+        print("Standard file does not exist")
+        return
+    path = Path(folder)
+    output_path = os.path.join(path.parent, "train_dual_quaternion")
+    os.makedirs(output_path, exist_ok=True)
+    for f in os.listdir(folder):
+        if not os.path.isdir(os.path.join(folder, f)):
+            continue
+        print(f"Processing {f}")
+        child_folder = os.path.join(output_path, f)
+        os.makedirs(child_folder, exist_ok=True)
+        for bvh in tqdm(os.listdir(os.path.join(folder, f))):
+            filename = os.path.join(folder, f, bvh)
+            skeleton = BVHSkeleton(filename)
+            data = parse_frames(filename)
+            dual, trans = skeleton.from_rotation_to_dual(data)
+            saved_file = os.path.join(child_folder, bvh[:-4])
+            np.savez(saved_file, dual, trans)
 
 
 def main():
-    import time
-    start = time.time()
-    skeleton = BVHSkeleton(sys.argv[1])
-    data = parse_frames(sys.argv[2])
-    # print(time.time() - start)
-    # start = time.time()
-    # pos, chain = skeleton.from_rotation_to_position(data)
-    # print(pos)
-    # plot_motion(pos, chain, interval=500)
-
-    converted, global_trans = skeleton.from_rotation_to_dual(data)
-    # test_convert, indices = skeleton.from_dual_to_position(converted, global_trans)
-    print(time.time() - start)
-    # start = time.time()
-    # plot_motion(test_convert, indices, interval=50, save_path="/home/halinh/convert.gif")
-    # print(time.time() - start)
+    convert_data(sys.argv[1])
 
 
 if __name__ == '__main__':
