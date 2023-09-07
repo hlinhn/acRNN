@@ -1,13 +1,15 @@
 import pytorch_lightning as pl
 import sys
 import numpy as np
-from torch.utils import data
+from torch.utils.data import Dataset, random_split, Subset, DataLoader
 import os
 import random
+from torchvision import transforms
+import torch
 
 
-class DQDataset(data.Dataset):
-    def __init__(self, folder, seq_len):
+class DQDataset(Dataset):
+    def __init__(self, folder, seq_len=100):
         self.folder = folder
         self.file_list = self.generate_datalist()
         self.seq_len = seq_len
@@ -46,17 +48,16 @@ class DQDataset(data.Dataset):
         return self.all_seq_len
 
     # ignoring frame rate for now
-    # transpose?
     def __getitem__(self, idx):
         seq_ind = self.index_hash[idx]
         start = random.randint(10, self.all_data[seq_ind].shape[0] - self.seq_len - 10)
-        raw_data = self.all_data[seq_ind][start:start + self.seq_len + 1, :]
+        raw_data = self.all_data[seq_ind][start:start + self.seq_len + 2, :]
         trans_diff = raw_data[1:, :3] - raw_data[:raw_data.shape[0] - 1, :3]
         new_data = raw_data[:raw_data.shape[0] - 1, :].copy()
         # predict global displacement, leave height above ground alone
         new_data[:, 0] = trans_diff[:, 0]
         new_data[:, 2] = trans_diff[:, 2]
-        return new_data
+        return torch.from_numpy(new_data[:self.seq_len]).double(), torch.from_numpy(new_data[1:]).double()
 
 
 class DQMotionData(pl.LightningDataModule):
@@ -64,17 +65,26 @@ class DQMotionData(pl.LightningDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.dataset = DQDataset(data_dir)
+        self.batch_size = batch_size
+        self.transform = transforms.Compose([transforms.ToTensor()])
 
-    def setup(self, stage):
-        # do a random split for now
+    def prepare_data(self):
         pass
 
+    def setup(self, stage=None):
+        # do a random split for now
+        all_len = self.dataset.all_seq_len
+        self.train_idx, self.val_idx = random_split(range(all_len), [int(all_len * 0.7), all_len - int(all_len * 0.7)])
 
-# def convert_to
+    def train_dataloader(self):
+        return DataLoader(Subset(self.dataset, self.train_idx), batch_size=self.batch_size)
+
+    def val_dataloader(self):
+        return DataLoader(Subset(self.dataset, self.val_idx), batch_size=self.batch_size)
+
+
 def main():
-    test = DQDataset(sys.argv[1], 100)
-    # folder = sys.argv[1]
-    # motion_data = DQMotionData(sys.argv[1])
+    test = DQMotionData(sys.argv[1])
 
 
 if __name__ == '__main__':

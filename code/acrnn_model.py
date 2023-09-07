@@ -13,10 +13,10 @@ class acRNN(pl.LightningModule):
         self.hidden_size = hidden_size
         self.out_size = out_size
 
-        self.lstm_1 = nn.LSTMCell(self.in_size, self.hidden_size)
-        self.lstm_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
-        self.lstm_3 = nn.LSTMCell(self.hidden_size, self.hidden_size)
-        self.out = nn.Linear(self.hidden_size, self.out_size)
+        self.lstm_1 = nn.LSTMCell(self.in_size, self.hidden_size).double()
+        self.lstm_2 = nn.LSTMCell(self.hidden_size, self.hidden_size).double()
+        self.lstm_3 = nn.LSTMCell(self.hidden_size, self.hidden_size).double()
+        self.out = nn.Linear(self.hidden_size, self.out_size).double()
 
         self.condition_num = cond_num
         self.gt_num = gt_num
@@ -25,11 +25,12 @@ class acRNN(pl.LightningModule):
         cs = []
         hs = []
         for i in range(3):
-            cs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size)))))
+            cs.append(Variable(torch.DoubleTensor(np.zeros((batch, self.hidden_size))).cuda()))
         for i in range(3):
-            hs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size)))))
+            hs.append(Variable(torch.DoubleTensor(np.zeros((batch, self.hidden_size))).cuda()))
         return (hs, cs)
 
+    # frame should be stacked (batch, time_steps, input_size)
     def step(self, frame, vec_h, vec_c):
         h0, c0 = self.lstm_1(frame, (vec_h[0], vec_c[0]))
         h1, c1 = self.lstm_2(vec_h[0], (vec_h[1], vec_c[1]))
@@ -47,14 +48,14 @@ class acRNN(pl.LightningModule):
         lst = np.concatenate((gt_lst, cond_lst), 1).reshape(-1)
         return lst[:seq_len]
 
-    def forward(self, data):
+    def forward(self, batch_data):
+        data, _ = batch_data
         batch = data.size()[0]
         seq_len = data.size()[1]
         cond_list = self.get_condition_list(self.condition_num, self.gt_num, seq_len)
         vec_h, vec_c = self.init_hidden(batch)
-
-        out_seq = Variable(torch.FloatTensor(np.zeros((batch, 1))))
-        out_frame = Variable(torch.FloatTensor(np.zeros((batch, self.out_size))))
+        out_seq = Variable(torch.DoubleTensor(np.zeros((batch, 1))).cuda())
+        out_frame = Variable(torch.DoubleTensor(np.zeros((batch, self.out_size))).cuda())
 
         # consider doing something else for teacher forcing here
         for i in range(seq_len):
@@ -66,9 +67,10 @@ class acRNN(pl.LightningModule):
             out_seq = torch.cat((out_seq, out_frame), 1)
         return out_seq[:, 1:out_seq.size()[1]]
 
-    def loss(self, output, data):
+    def loss(self, output, batch_data):
+        _, target = batch_data
         loss_func = nn.MSELoss()
-        loss = loss_func(output, data)
+        loss = loss_func(output, target.view(target.size()[0], -1))
         return loss
 
     def training_step(self, train_batch, batch_idx):
