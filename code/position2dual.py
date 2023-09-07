@@ -156,6 +156,16 @@ def convert_data(folder):
             np.savez(saved_file, dual, trans)
 
 
+def test_visualization(filename):
+    skeleton = BVHSkeleton(filename)
+    data = parse_frames(filename)
+    dual, trans = skeleton.from_rotation_to_dual(data)
+    for i in range(trans.shape[0]):
+        trans[i][1] = 0
+    converted, index = skeleton.from_dual_to_position(dual, trans)
+    plot_motion(converted, index, interval=500)
+
+
 def test_load(filename):
     data = np.load(filename)
     dual = data['arr_0']
@@ -166,7 +176,8 @@ def test_load(filename):
 
 def main():
     # convert_data(sys.argv[1])
-    test_load(sys.argv[1])
+    # test_load(sys.argv[1])
+    test_visualization(sys.argv[1])
 
 
 if __name__ == '__main__':
