@@ -12,6 +12,14 @@ import os
 from pathlib import Path
 
 
+def normalize(dual):
+    pass
+
+
+def pick_closer(dual, target):
+    pass
+
+
 class BVHSkeleton:
     def __init__(self, sample):
         self.skeleton, self.non_end_bones = read_bvh_hierarchy(sample)
