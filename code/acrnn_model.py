@@ -6,7 +6,7 @@ import numpy as np
 
 
 class acRNN(pl.LightningModule):
-    def __init__(self, in_size=171, hidden_size=1024, out_size=171):
+    def __init__(self, in_size=171, hidden_size=1024, out_size=171, cond_num=5, gt_num=5):
         super(acRNN, self).__init__()
 
         self.in_size = in_size
@@ -18,13 +18,16 @@ class acRNN(pl.LightningModule):
         self.lstm_3 = nn.LSTMCell(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size, self.out_size)
 
+        self.condition_num = cond_num
+        self.gt_num = gt_num
+
     def init_hidden(self, batch):
         cs = []
         hs = []
         for i in range(3):
-            cs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size))).cuda()))
+            cs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size)))))
         for i in range(3):
-            hs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size))).cuda()))
+            hs.append(Variable(torch.FloatTensor(np.zeros((batch, self.hidden_size)))))
         return (hs, cs)
 
     def step(self, frame, vec_h, vec_c):
@@ -44,14 +47,14 @@ class acRNN(pl.LightningModule):
         lst = np.concatenate((gt_lst, cond_lst), 1).reshape(-1)
         return lst[:seq_len]
 
-    def forward(self, data, cond_num=5, gt_num=5):
+    def forward(self, data):
         batch = data.size()[0]
         seq_len = data.size()[1]
-        cond_list = self.get_condition_list(cond_num, gt_num, seq_len)
+        cond_list = self.get_condition_list(self.condition_num, self.gt_num, seq_len)
         vec_h, vec_c = self.init_hidden(batch)
 
-        out_seq = Variable(torch.FloatTensor(np.zeros((batch, 1))).cuda())
-        out_frame = Variable(torch.FloatTensor(np.zeros((batch, self.out_size))).cuda())
+        out_seq = Variable(torch.FloatTensor(np.zeros((batch, 1))))
+        out_frame = Variable(torch.FloatTensor(np.zeros((batch, self.out_size))))
 
         # consider doing something else for teacher forcing here
         for i in range(seq_len):
@@ -69,10 +72,16 @@ class acRNN(pl.LightningModule):
         return loss
 
     def training_step(self, train_batch, batch_idx):
-        pass
+        predicted = self(train_batch)
+        loss = self.loss(predicted, train_batch)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
 
     def validation_step(self, val_batch, batch_idx):
-        pass
+        predicted = self(val_batch)
+        loss = self.loss(predicted, val_batch)
+        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

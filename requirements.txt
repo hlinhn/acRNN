@@ -4,3 +4,4 @@ opencv-python
 matplotlib
 transforms3d
 tqdm
+pytorch-lightning
