@@ -156,8 +156,17 @@ def convert_data(folder):
             np.savez(saved_file, dual, trans)
 
 
+def test_load(filename):
+    data = np.load(filename)
+    dual = data['arr_0']
+    glob = data['arr_1']
+    dual = dual.reshape(dual.shape[0], -1)
+    composite = np.hstack((glob, dual))
+
+
 def main():
-    convert_data(sys.argv[1])
+    # convert_data(sys.argv[1])
+    test_load(sys.argv[1])
 
 
 if __name__ == '__main__':
