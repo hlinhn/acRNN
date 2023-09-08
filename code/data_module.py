@@ -103,12 +103,14 @@ def view_data(data, standard, save_name="test.gif"):
 def explore_data(dual, trans):
     from matplotlib import pyplot as plt
     fig, axs = plt.subplots(1, 3, sharey=True, tight_layout=True)
+    trans = trans.reshape(-1, 3)
     for i in range(3):
         axs[i].hist(trans[:, i])
     plt.savefig("global_trans_hist.png")
 
 
 def plot_data(data):
+    standard_file = "/home/halinh/projects/acRNN/train_data_bvh/standard.bvh"
     in_frame, target = data
     composed = [in_frame[0, :, 3:].numpy(), in_frame[0, :, :3].numpy()]
     composed[0] = composed[0].reshape(composed[0].shape[0], 21, 8)
@@ -123,8 +125,10 @@ def main():
     test.setup()
 
     train_loader = test.train_dataloader()
-    standard_file = "/home/halinh/projects/acRNN/train_data_bvh/standard.bvh"
     for data in train_loader:
+        d, _ = data
+        dual, trans = d[:, :, 3:].numpy(), d[:, :, :3].numpy()
+        explore_data(dual, trans)
         break
 
 
