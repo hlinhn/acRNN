@@ -76,13 +76,13 @@ class acRNN(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
         predicted = self(train_batch)
         loss = self.loss(predicted, train_batch)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def validation_step(self, val_batch, batch_idx):
         predicted = self(val_batch)
         loss = self.loss(predicted, val_batch)
-        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
 
 
     def configure_optimizers(self):
