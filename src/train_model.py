@@ -17,7 +17,8 @@ def main():
     data_loader = DQMotionData(sys.argv[1])
     logger = TensorBoardLogger("acrnn_logs", name="acrnn")
 
-    trainer = pl.Trainer(devices=4, max_epochs=1000, logger=logger, strategy="ddp")
+    trainer = pl.Trainer(devices=4, max_epochs=5000, logger=logger, strategy="ddp",
+                         default_root_dir="/home/halinh/projects/acRNN/logs")
     trainer.fit(model=model, datamodule=data_loader)
 
 
