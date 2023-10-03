@@ -7,3 +7,4 @@ tqdm
 pytorch-lightning
 torchvision
 tensorboard
+scipy
