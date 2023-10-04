@@ -13,7 +13,15 @@ from pathlib import Path
 
 
 def normalize(dual):
-    pass
+    rot = dual[:4]
+    trans = dual[4:]
+    rot_mag = np.sqrt(np.sum(rot ** 2))
+    print(rot_mag)
+    dot = np.dot(rot, trans)
+    print(dot)
+    dual[:4] /= rot_mag
+    dual[4:] = trans / rot_mag - dual[:4] * dot / rot_mag ** 2
+    return dual
 
 
 def pick_closer(dual, target):
@@ -172,12 +180,17 @@ def test_load(filename):
     glob = data['arr_1']
     dual = dual.reshape(dual.shape[0], -1)
     composite = np.hstack((glob, dual))
+    test_data = dual[1000, 5*8:6*8]
+    print(test_data)
+    normed = normalize(test_data)
+    print(normed)
+    print(test_data)
 
 
 def main():
     # convert_data(sys.argv[1])
-    # test_load(sys.argv[1])
-    test_visualization(sys.argv[1])
+    test_load(sys.argv[1])
+    # test_visualization(sys.argv[1])
 
 
 if __name__ == '__main__':

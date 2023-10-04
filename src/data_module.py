@@ -45,7 +45,10 @@ class DQDataset(Dataset):
         flattened = [x for y in data for x in y]
         flattened_np = np.array(flattened)
         mean = np.mean(flattened_np, axis=0)
+        quat_idx = [i * 8 + x + 3 for i in range(21) for x in range(4)]
+        mean[quat_idx] = 0
         std = np.std(flattened_np, axis=0) + 1e-10
+        std[quat_idx] = 1.0
         return mean, std
 
     def convert_list_to_data(self, file_list):
@@ -146,13 +149,14 @@ def explore_data(dual, trans):
     plt.savefig("global_trans_hist.png")
 
 
-def plot_data(data):
+def plot_data(data, idx=0):
     standard_file = "/home/halinh/projects/acRNN/train_data_bvh/standard.bvh"
     in_frame, target = data
-    composed = [in_frame[0, :, 3:].numpy(), in_frame[0, :, :3].numpy()]
+    in_frame = in_frame.view(target.size())
+    composed = [in_frame[idx, :, 3:].cpu().detach().numpy(), in_frame[idx, :, :3].cpu().detach().numpy()]
     composed[0] = composed[0].reshape(composed[0].shape[0], 21, 8)
     view_data(composed, standard_file)
-    composed_2 = [target[0, :, 3:].numpy(), target[0, :, :3].numpy()]
+    composed_2 = [target[idx, :, 3:].numpy(), target[idx, :, :3].numpy()]
     composed_2[0] = composed_2[0].reshape(composed_2[0].shape[0], 21, 8)
     view_data(composed_2, standard_file, "target.gif")
 
