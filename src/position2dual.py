@@ -171,7 +171,7 @@ def test_visualization(filename):
     for i in range(trans.shape[0]):
         trans[i][1] = 0
     converted, index = skeleton.from_dual_to_position(dual, trans)
-    plot_motion(converted, index, interval=500)
+    plot_motion(converted, index, interval=50)
 
 
 def test_load(filename):
@@ -186,6 +186,11 @@ def test_load(filename):
     print(normed)
     print(test_data)
 
+
+def test_rotation_to_position(filename):
+    skeleton = BVHSkeleton(filename)
+    data = parse_frames(filename)
+    position = skeleton.from_rotation_to_position(data)
 
 def main():
     # convert_data(sys.argv[1])

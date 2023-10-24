@@ -10,14 +10,15 @@ def plot_motion(motion, kinematic_tree, interval=50, save_path="/home/halinh/tes
     fig = plt.figure(figsize=[3, 3])
     ax = fig.add_subplot(111, projection='3d')
 
+    scale = 100
     def init():
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax.set_zticklabels([])
 
-        ax.set_xlim(-100, 100)
-        ax.set_ylim(-100, 100)
-        ax.set_zlim(-100, 100)
+        ax.set_xlim(-scale, scale)
+        ax.set_ylim(-scale, scale)
+        ax.set_zlim(-scale, scale)
 
         ax.view_init(azim=-90, elev=110)
         # ax.set_axis_off()
@@ -27,8 +28,10 @@ def plot_motion(motion, kinematic_tree, interval=50, save_path="/home/halinh/tes
 
     colors = ['red', 'magenta', 'black', 'green', 'blue']
     def update(index):
-        ax.lines.clear()
-        ax.collections.clear()
+        for i in range(len(ax.lines)-1, 0, -1):
+            ax.lines[i].remove()
+        for i in range(len(ax.collections)-1, 0, -1):
+            ax.collections[i].remove()
         if kinematic_tree is not None:
             for chain, color in zip(kinematic_tree, colors):
                 ax.plot(motion[chain, 0, index],

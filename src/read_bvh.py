@@ -57,7 +57,7 @@ def parse_frames(bvh_filename):
    return data
 
 
-standard_bvh_file="../train_data_bvh/standard.bvh"
+standard_bvh_file="/home/halinh/projects/acRNN/train_data_bvh/standard.bvh"
 weight_translation=0.01
 skeleton, non_end_bones=read_bvh_hierarchy.read_bvh_hierarchy(standard_bvh_file)
 sample_data=parse_frames(standard_bvh_file)
